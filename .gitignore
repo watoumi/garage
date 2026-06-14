@@ -1,0 +1,30 @@
+# ---------- Python / backend ----------
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+backend/.venv/
+backend/.env
+backend/garage.db
+backend/*.db
+backend/.pytest_cache/
+.pytest_cache/
+
+# Uploaded images (keep the folder, ignore its contents)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ---------- Node / frontend ----------
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+next-env.d.ts
+
+# ---------- OS / editor ----------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
