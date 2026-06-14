@@ -1,6 +1,6 @@
 # 🚗 Garage.ma — Verified Dealership Car Marketplace (MVP)
 
-[![CI](https://github.com/watoumi/garage1/actions/workflows/ci.yml/badge.svg)](https://github.com/watoumi/garage1/actions/workflows/ci.yml)
+[![CI](https://github.com/watoumi/garage/actions/workflows/ci.yml/badge.svg)](https://github.com/watoumi/garage/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A **garage-first** used-car marketplace for Morocco. Unlike general classifieds
