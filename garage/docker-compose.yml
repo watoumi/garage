@@ -1,0 +1,65 @@
+# Garage.ma — full stack: PostgreSQL + FastAPI backend + Next.js frontend.
+#
+#   docker compose up --build
+#
+# Frontend:  http://localhost:3000
+# API docs:  http://localhost:8000/docs
+#
+# Seeded accounts (created on first start):
+#   admin@garage.ma / admin123
+#   atlas@garage.ma / garage123   (approved)
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: garage
+      POSTGRES_PASSWORD: garage
+      POSTGRES_DB: garage
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U garage -d garage"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://garage:garage@db:5432/garage
+      SECRET_KEY: change-this-super-secret-key-in-production
+      ACCESS_TOKEN_EXPIRE_MINUTES: "10080"
+      CORS_ORIGINS: http://localhost:3000
+      PUBLIC_BASE_URL: http://localhost:8000
+      ADMIN_EMAIL: admin@garage.ma
+      ADMIN_PASSWORD: admin123
+      # New garages go live instantly (no admin approval). Set to "false" to
+      # require manual verification (the production-safe trust model).
+      AUTO_APPROVE_GARAGES: "true"
+      # Seed sample admin/garages/cars on startup. Set to "false" after first run.
+      SEED_ON_START: "true"
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the client bundle at build time; must be browser-reachable.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
+  uploads:
