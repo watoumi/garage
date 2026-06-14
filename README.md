@@ -1,5 +1,8 @@
 # 🚗 Garage.ma — Verified Dealership Car Marketplace (MVP)
 
+[![CI](https://github.com/watoumi/garage1/actions/workflows/ci.yml/badge.svg)](https://github.com/watoumi/garage1/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A **garage-first** used-car marketplace for Morocco. Unlike general classifieds
 (e.g. Avito), **only verified garages can list cars**. Buyers browse publicly and
 contact garages directly on **WhatsApp** — no payments, no chat, no accounts for
@@ -8,6 +11,28 @@ buyers. Trust and simplicity are the whole point.
 ```
 Garage registers → Admin approves → Garage uploads cars → Buyer browses → WhatsApp → Deal happens offline
 ```
+
+> **Why this design?** The whole product bet is *trust*, so the central rule —
+> a car is public **only if** its garage is admin-approved, not disabled, and the
+> car is active — is **enforced server-side**, not in the UI, and is covered by
+> tests ([`backend/tests/test_trust_rules.py`](backend/tests/test_trust_rules.py)).
+> A few deliberate MVP calls:
+>
+> - **No buyer accounts / no payments / no in-app chat.** Deals close on WhatsApp,
+>   exactly how this market already works — less to build, less to secure, faster to trust.
+> - **SQLite by default, Postgres via one env var** — zero-config to clone and run,
+>   production-ready without code changes.
+> - **Local disk for images behind a `storage.py` seam** so swapping in S3 later is a one-file change.
+> - **The API refuses to boot in production with default secrets or wildcard CORS**
+>   (see `assert_production_safe()` in `app/config.py`).
+
+## Screenshots
+
+<!-- TODO: replace with real captures — commit them under docs/screenshots/ and link here,
+     or drag images into a GitHub issue/PR to host them and paste the URLs. -->
+| Homepage (browse + filters) | Car detail + WhatsApp | Admin dashboard |
+|---|---|---|
+| _add screenshot_ | _add screenshot_ | _add screenshot_ |
 
 ## Tech stack
 
@@ -24,26 +49,30 @@ Garage registers → Admin approves → Garage uploads cars → Buyer browses �
 ## Project structure
 
 ```
-garage/
+.
 ├── backend/
 │   ├── app/
-│   │   ├── main.py          # FastAPI app, CORS, static /uploads, routers
-│   │   ├── config.py        # env-based settings
+│   │   ├── main.py          # FastAPI app, CORS, security headers, static /uploads, routers
+│   │   ├── config.py        # env-based settings + assert_production_safe()
 │   │   ├── database.py      # engine + session + Base
-│   │   ├── models.py        # User, GarageProfile, CarListing, CarImage, AdminActionLog
+│   │   ├── models.py        # User, GarageProfile, CarListing, CarImage, CarLead, AdminActionLog
 │   │   ├── schemas.py       # Pydantic request/response models
 │   │   ├── security.py      # password hashing + JWT
 │   │   ├── deps.py          # auth dependencies (current user / garage / admin)
-│   │   ├── storage.py       # image upload validation + saving
-│   │   └── routers/         # auth.py, garage.py, cars.py, admin.py
+│   │   ├── storage.py       # image upload validation + saving (S3 swap point)
+│   │   └── routers/         # auth, garage, cars, garages_public, admin
+│   ├── tests/               # pytest: trust rules, authorization, auth
 │   ├── seed.py              # sample admin + garages + cars
-│   ├── requirements.txt
+│   ├── requirements.txt     # runtime deps
+│   ├── requirements-dev.txt # + pytest, httpx
 │   └── .env.example
-└── frontend/
-    ├── app/                 # pages (see "Frontend pages" below)
-    ├── components/          # Navbar, CarCard
-    ├── lib/                 # api client, auth, types, formatting helpers
-    └── .env.local.example
+├── frontend/
+│   ├── app/                 # pages (see "Frontend pages" below)
+│   ├── components/          # Navbar, CarCard, maps, galleries, ...
+│   ├── lib/                 # api client, auth, types, formatting helpers
+│   └── .env.local.example
+├── docker-compose.yml       # Postgres + API + frontend
+└── .github/workflows/ci.yml # backend tests + frontend build
 ```
 
 ---
@@ -126,6 +155,23 @@ npm run dev
 ```
 
 - App: <http://localhost:3000>
+
+---
+
+## Tests
+
+The backend has a pytest suite focused on the security-critical paths — the
+trust rules, listing ownership, and role gating — run against a throwaway
+SQLite database that is rebuilt before each test.
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest
+```
+
+CI runs these on every push and pull request (`.github/workflows/ci.yml`),
+alongside a production frontend build.
 
 ---
 
@@ -224,3 +270,9 @@ Base URL `http://localhost:8000`. Auth via `Authorization: Bearer <token>`.
 - Move image storage to S3-compatible object storage (the `storage.py` seam is where you'd swap it).
 - Add Alembic migrations instead of `create_all`.
 - Put the API behind HTTPS and tighten `CORS_ORIGINS` to your real domain.
+
+---
+
+## License
+
+[MIT](LICENSE) © watoumi
