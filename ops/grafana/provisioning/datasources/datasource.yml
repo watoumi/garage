@@ -1,0 +1,12 @@
+# Auto-provision Prometheus as the default Grafana datasource on startup,
+# so the stack comes up fully wired with no manual clicking.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

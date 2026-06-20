@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -80,7 +81,17 @@ app.include_router(garages_public.router)
 app.include_router(cars.router)
 app.include_router(admin.router)
 
+# ---------- Observability ----------
+# Exposes Prometheus metrics at /metrics: request counts, latency histograms
+# (for p50/p95/p99), in-progress requests, plus default process CPU/memory.
+# Grouping by exact status code lets us compute error rate (4xx/5xx) in Grafana.
+Instrumentator(
+    should_group_status_codes=False,
+    excluded_handlers=["/metrics", "/health"],
+).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
 
 @app.get("/health", tags=["meta"])
 def health():
+    """Liveness probe used by Docker/Compose health checks."""
     return {"status": "ok"}

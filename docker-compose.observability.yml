@@ -1,0 +1,85 @@
+# Observability overlay — run alongside the base stack:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#
+# Grafana:     http://localhost:3001  (admin / ${GRAFANA_PASSWORD:-admin})
+# Prometheus:  http://localhost:9090
+#
+# Prometheus scrapes: backend /metrics, cAdvisor (containers), node-exporter
+# (host), and postgres-exporter. Grafana auto-loads the datasource + dashboard.
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: garage-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: garage-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+
+  # Per-container CPU / memory / network / filesystem metrics.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: garage-cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    ports:
+      - "8081:8080"
+
+  # Host-level CPU / memory / disk metrics.
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: garage-node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
+
+  # PostgreSQL performance metrics (connections, transactions, cache hit ratio).
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: garage-postgres-exporter
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: "postgresql://garage:garage@db:5432/garage?sslmode=disable"
+    ports:
+      - "9187:9187"
+
+volumes:
+  prometheus_data:
+  grafana_data:

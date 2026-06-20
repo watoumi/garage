@@ -1,0 +1,13 @@
+# Auto-load any dashboard JSON found in this folder at startup.
+apiVersion: 1
+
+providers:
+  - name: garage-dashboards
+    orgId: 1
+    folder: "Garage.ma"
+    type: file
+    disableDeletion: false
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

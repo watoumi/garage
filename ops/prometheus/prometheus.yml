@@ -1,0 +1,34 @@
+# Prometheus scrape configuration for the Garage.ma platform.
+# Each job points at a container on the shared Docker network (service DNS).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: garage-ma
+
+scrape_configs:
+  # Prometheus scraping itself (sanity / self-monitoring).
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # FastAPI application metrics (request rate, latency, errors, process CPU/mem).
+  - job_name: backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:8000"]
+
+  # Per-container CPU / memory / network / filesystem (Docker).
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # Host-level CPU / memory / disk.
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # PostgreSQL performance metrics (connections, transactions, cache hit ratio).
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]

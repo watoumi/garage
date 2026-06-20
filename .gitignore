@@ -22,6 +22,10 @@ frontend/out/
 frontend/.env.local
 next-env.d.ts
 
+# ---------- Secrets / ops ----------
+.env
+ops/nginx/certs/
+
 # ---------- OS / editor ----------
 .DS_Store
 Thumbs.db
