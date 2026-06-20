@@ -4,3 +4,4 @@ export { Card, CardHeader, CardTitle, CardBody, type CardProps } from "./Card";
 export { Badge, type BadgeProps } from "./Badge";
 export { StatCard, type StatCardProps } from "./StatCard";
 export { PageHeader, type PageHeaderProps } from "./PageHeader";
+export { DashboardShell, type DashboardShellProps, type NavItem } from "./DashboardShell";

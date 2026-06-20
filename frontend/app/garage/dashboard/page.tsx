@@ -4,12 +4,19 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import GarageAvatar from "@/components/GarageAvatar";
+import { DashboardShell, StatCard } from "@/components/ui";
 import { api } from "@/lib/api";
 import { formatMileage, formatPrice } from "@/lib/format";
 import type { Car, Garage, GarageAnalytics, Lead } from "@/lib/types";
 import { useAuthGuard } from "@/lib/useAuthGuard";
 
-type Tab = "inventory" | "stats" | "leads";
+type Tab = "inventory" | "leads";
+
+const NAV = [
+  { href: "/garage/dashboard", label: "Inventaire", icon: "🚗" },
+  { href: "/garage/analytics", label: "Statistiques", icon: "📊" },
+  { href: "/garage/profile", label: "Profil", icon: "🏢" },
+];
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -83,79 +90,85 @@ export default function GarageDashboard() {
   if (!ready) return null;
 
   return (
-    <div className="space-y-6">
-      {/* ---------- Header ---------- */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <DashboardShell
+      nav={NAV}
+      eyebrow="Mon espace"
+      title={garage?.name || "Tableau de bord"}
+      actions={
+        <>
+          <Link href="/garage/profile" className="btn-outline">Modifier le profil</Link>
+          <Link href="/garage/add-car" className="btn-primary">+ Ajouter une voiture</Link>
+        </>
+      }
+    >
+      <div className="space-y-6">
+        {/* Identity + approval state */}
         <div className="flex items-center gap-4">
           {garage && (
             <div className="relative">
-              <GarageAvatar name={garage.name} logoUrl={garage.logo_url} size={64} />
+              <GarageAvatar name={garage.name} logoUrl={garage.logo_url} size={56} />
               <button
                 type="button"
                 onClick={() => logoInput.current?.click()}
                 disabled={logoBusy}
                 title="Changer le logo"
-                className="absolute -bottom-1.5 -right-1.5 grid h-7 w-7 place-items-center rounded-full border border-[var(--bg)] bg-gradient-to-br from-brand to-brand-dark text-[#1a130a] shadow transition hover:scale-110 disabled:opacity-50"
+                className="absolute -bottom-1.5 -right-1.5 grid h-7 w-7 place-items-center rounded-full border border-[var(--bg)] bg-gradient-to-br from-brand to-brand-dark text-white shadow transition hover:scale-110 disabled:opacity-50"
               >
                 {logoBusy ? "…" : "✎"}
               </button>
               <input ref={logoInput} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={onLogoPicked} />
             </div>
           )}
-          <div>
-            <span className="eyebrow">Mon espace</span>
-            <h1 className="font-display mt-1 text-4xl font-bold uppercase tracking-wide">
-              {garage?.name || "Tableau de bord"}
-            </h1>
-            {garage && <p className="num mt-1 text-sm text-faint">{garage.city} · {garage.phone}</p>}
+          {garage && <p className="num text-sm text-faint">{garage.city} · {garage.phone}</p>}
+        </div>
+
+        {garage && !garage.is_approved && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+            ⏳ Votre garage est <b>en attente de validation</b>. Vos annonces ne seront visibles
+            publiquement qu&apos;après approbation par un administrateur.
           </div>
+        )}
+        {garage?.is_disabled && (
+          <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
+            🚫 Votre garage a été désactivé. Contactez l&apos;administration.
+          </div>
+        )}
+
+        {/* KPI strip */}
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+          <StatCard label="Annonces actives" value={stats ? `${stats.active_listings}/${stats.total_listings}` : "—"} icon="🚗" />
+          <StatCard label="Vues totales" value={stats?.total_views ?? "—"} icon="👁" />
+          <StatCard label="Leads WhatsApp" value={stats?.total_leads ?? "—"} icon="💬" />
+          <StatCard
+            label="Leads (7 j)"
+            value={stats?.leads_last_7d ?? "—"}
+            icon="⚡"
+          />
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/garage/profile" className="btn-outline">Modifier le profil</Link>
-          <Link href="/garage/add-car" className="btn-primary">+ Ajouter une voiture</Link>
+
+        {/* Tabs */}
+        <div className="flex items-center justify-between border-b hair">
+          <div className="flex gap-1">
+            <TabBtn active={tab === "inventory"} onClick={() => setTab("inventory")}>Inventaire</TabBtn>
+            <TabBtn active={tab === "leads"} onClick={() => setTab("leads")}>
+              Leads{leads.length ? ` (${leads.length})` : ""}
+            </TabBtn>
+          </div>
+          <Link href="/garage/analytics" className="pb-2 text-xs font-semibold text-muted transition hover:text-accent">
+            Voir les statistiques détaillées →
+          </Link>
         </div>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {loading ? (
+          <p className="text-muted">Chargement…</p>
+        ) : tab === "inventory" ? (
+          <InventoryTab cars={cars} onToggle={toggleActive} onRemove={remove} />
+        ) : (
+          <LeadsTab leads={leads} />
+        )}
       </div>
-
-      {garage && !garage.is_approved && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
-          ⏳ Votre garage est <b>en attente de validation</b>. Vos annonces ne seront visibles
-          publiquement qu&apos;après approbation par un administrateur.
-        </div>
-      )}
-      {garage?.is_disabled && (
-        <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-          🚫 Votre garage a été désactivé. Contactez l&apos;administration.
-        </div>
-      )}
-
-      {/* ---------- KPI strip ---------- */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Kpi label="Annonces actives" value={stats ? `${stats.active_listings}/${stats.total_listings}` : "—"} />
-        <Kpi label="Vues totales" value={stats?.total_views ?? "—"} />
-        <Kpi label="Leads WhatsApp" value={stats?.total_leads ?? "—"} accent />
-        <Kpi label="Leads (7 j)" value={stats?.leads_last_7d ?? "—"} accent />
-      </div>
-
-      {/* ---------- Tabs ---------- */}
-      <div className="flex gap-1 border-b hair">
-        <TabBtn active={tab === "inventory"} onClick={() => setTab("inventory")}>Inventaire</TabBtn>
-        <TabBtn active={tab === "stats"} onClick={() => setTab("stats")}>Statistiques</TabBtn>
-        <TabBtn active={tab === "leads"} onClick={() => setTab("leads")}>
-          Leads{leads.length ? ` (${leads.length})` : ""}
-        </TabBtn>
-      </div>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {loading ? (
-        <p className="text-muted">Chargement…</p>
-      ) : tab === "inventory" ? (
-        <InventoryTab cars={cars} onToggle={toggleActive} onRemove={remove} />
-      ) : tab === "stats" ? (
-        <StatsTab stats={stats} />
-      ) : (
-        <LeadsTab leads={leads} />
-      )}
-    </div>
+    </DashboardShell>
   );
 }
 
@@ -190,12 +203,12 @@ function InventoryTab({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-display truncate text-lg tracking-wide">
+            <p className="font-display truncate text-lg tracking-tight">
               {car.brand} {car.model} · <span className="num">{car.year}</span>
             </p>
             <p className="num text-sm text-muted">{formatPrice(car.price)} · {formatMileage(car.mileage)}</p>
             <div className="mt-1 flex items-center gap-2 text-xs">
-              <span className={`rounded-md px-2 py-0.5 ${car.is_active ? "bg-teal-500/15 text-teal" : "bg-black/5 text-faint"}`}>
+              <span className={`rounded-md px-2 py-0.5 ${car.is_active ? "bg-success/15 text-teal" : "bg-black/5 text-faint"}`}>
                 {car.is_active ? "● Active" : "○ Masquée"}
               </span>
               <span className="num text-faint">👁 {car.views}</span>
@@ -206,36 +219,6 @@ function InventoryTab({
             <button onClick={() => onToggle(car)} className="btn-outline text-sm">{car.is_active ? "Masquer" : "Publier"}</button>
             <button onClick={() => onRemove(car.id)} className="btn-danger text-sm">Supprimer</button>
           </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function StatsTab({ stats }: { stats: GarageAnalytics | null }) {
-  if (!stats || stats.per_car.length === 0) {
-    return <p className="card p-10 text-center text-muted">Pas encore de statistiques.</p>;
-  }
-  const maxViews = Math.max(...stats.per_car.map((c) => c.views), 1);
-  return (
-    <div className="card overflow-hidden">
-      <div className="grid grid-cols-[1fr_auto_auto] gap-3 border-b hair px-4 py-3 text-xs uppercase tracking-wider text-faint">
-        <span>Véhicule</span>
-        <span className="w-20 text-right">Vues</span>
-        <span className="w-20 text-right">Leads</span>
-      </div>
-      {stats.per_car.map((c) => (
-        <div key={c.car_id} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-3 [&:not(:first-child)]:border-t [&:not(:first-child)]:hair">
-          <div className="min-w-0">
-            <Link href={`/car/${c.car_id}`} className="font-display truncate tracking-wide hover:text-saffron">
-              {c.label}
-            </Link>
-            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-black/5">
-              <div className="h-full rounded-full bg-gradient-to-r from-brand to-brand-dark" style={{ width: `${(c.views / maxViews) * 100}%` }} />
-            </div>
-          </div>
-          <span className="num w-20 text-right text-muted">{c.views}</span>
-          <span className="num w-20 text-right font-semibold text-saffron">{c.leads}</span>
         </div>
       ))}
     </div>
@@ -270,22 +253,12 @@ function LeadsTab({ leads }: { leads: Lead[] }) {
   );
 }
 
-/* ---------------- bits ---------------- */
-function Kpi({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
-  return (
-    <div className="card p-4">
-      <p className={`num text-3xl font-bold ${accent ? "text-saffron" : "text-[var(--text)]"}`}>{value}</p>
-      <p className="mt-1 text-xs uppercase tracking-wider text-faint">{label}</p>
-    </div>
-  );
-}
-
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
       className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold uppercase tracking-wider transition ${
-        active ? "border-brand text-saffron" : "border-transparent text-faint hover:text-[var(--text)]"
+        active ? "border-accent text-accent" : "border-transparent text-faint hover:text-[var(--text)]"
       }`}
     >
       {children}
