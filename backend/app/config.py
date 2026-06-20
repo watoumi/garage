@@ -2,7 +2,6 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 DEFAULT_SECRET = "change-this-super-secret-key-in-production"
 DEFAULT_ADMIN_PASSWORD = "admin123"
 

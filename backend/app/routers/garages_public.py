@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import CarImage, CarListing, GarageProfile
-from app.schemas import CarOut, GarageCard, GaragePublic, GarageProfilePublic, NearbyGarage
+from app.schemas import CarOut, GarageCard, GarageProfilePublic, GaragePublic, NearbyGarage
 
 
 def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:

@@ -1,0 +1,11 @@
+# Ruff: fast Python linter + import sorter.
+line-length = 120
+target-version = "py311"
+
+[lint]
+# pycodestyle errors, pyflakes, import sorting, pyupgrade, bugbear.
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]  # FastAPI uses function calls (Depends(...)) in argument defaults
+
+[lint.per-file-ignores]
+"tests/*" = ["E501"]  # allow long assertion lines in tests

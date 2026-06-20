@@ -63,11 +63,11 @@ def save_upload(file: UploadFile) -> str:
             image = background
         else:
             image = image.convert("RGB")
-    except (UnidentifiedImageError, OSError):
+    except (UnidentifiedImageError, OSError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="That file isn't a readable image. Try a photo (JPEG, PNG, HEIC…).",
-        )
+        ) from exc
 
     image.thumbnail((MAX_DIMENSION, MAX_DIMENSION))
 

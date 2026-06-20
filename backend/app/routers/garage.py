@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import func
@@ -88,7 +88,7 @@ def analytics(
     """Aggregate views & WhatsApp leads for the current garage's inventory."""
     cars = db.query(CarListing).filter(CarListing.garage_id == garage.id).all()
     car_ids = [c.id for c in cars]
-    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    week_ago = datetime.now(UTC) - timedelta(days=7)
 
     leads_per_car: dict[int, int] = {}
     total_leads = leads_last_7d = 0

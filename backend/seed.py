@@ -5,6 +5,8 @@ Safe to run multiple times (it resets sample data, keeps your real data untouche
 only in the sense that it wipes the seeded rows by email — use on a dev DB).
 """
 
+from datetime import UTC
+
 from app.config import settings
 from app.database import Base, SessionLocal, engine, ensure_columns
 from app.models import (
@@ -137,7 +139,7 @@ def reset_seed_data(db):
 def seed_engagement(db):
     """Give approved garages' cars some random views and recent leads."""
     import random
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from app.models import CarLead, GarageProfile
 
@@ -147,7 +149,7 @@ def seed_engagement(db):
         .filter(GarageProfile.is_approved.is_(True))
         .all()
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for car in cars:
         car.views = random.randint(40, 600)
         for _ in range(random.randint(1, 9)):

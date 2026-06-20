@@ -26,7 +26,7 @@ def get_current_user(
         if user_id is None:
             raise _CREDENTIALS_EXC
     except JWTError:
-        raise _CREDENTIALS_EXC
+        raise _CREDENTIALS_EXC from None
 
     user = db.get(User, int(user_id))
     if user is None or not user.is_active:
